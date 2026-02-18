@@ -1,0 +1,8 @@
+defaults:
+  - hydra: default
+  - _self_
+
+project:
+  name: vision_suite_legacy
+  runs_root: runs
+  notes: "Legacy scripts migrated to rvinci project"

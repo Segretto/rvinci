@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rvinci"
+version = "0.1.0"
+description = "A modular monorepo for deep-learning-based robotics skills."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "Pillow",
+    "pycocotools",
+    "joblib",
+    "tqdm",
+    "matplotlib",
+    "pydantic",
+    "hydra-core",
+    "omegaconf",
+    "torch",
+    "torchvision",
+    "vggt",
+    "lark"
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv.sources]
+vggt = { path = "/home/segreto/Repos/VGGT", editable = true }
+
+[project.scripts]
+rvinci-legacy = "rvinci.projects.vision_suite_legacy.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "integration: component-level integration tests",
+  "e2e: end-to-end CLI tests",
+  "gpu: requires CUDA/GPU",
+  "robot: requires robot SDK/hardware",
+]

@@ -1,0 +1,16 @@
+# Research Artifacts
+runs/
+models/**/*
+!models/README.md
+!models/.gitkeep
+
+# Python & Env
+__pycache__/
+.venv/
+.uv/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# IDE & OS
+.vscode
