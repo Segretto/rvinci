@@ -1,0 +1,29 @@
+defaults:
+  - hydra: default
+  - _self_
+
+project:
+  name: spot_data_collection
+  runs_root: runs
+  notes: "Collect trajectory data (joints and cartesian poses) from a Spot robot."
+
+skills:
+  enabled: []
+
+spot:
+  hostname: "192.168.80.3"
+  username: "admin"
+  password: "pass"
+  frequency_hz: 20.0
+  output_dir: "positions"
+
+trajectory:
+  num_positions: 200
+  x_distance_range: 0.55
+  y_range: 0.5
+  z_range: 0.4
+  y_range_plane: 0.3
+  z_range_plane: 0.3
+  roll_range_deg: 95.0
+  move_duration: 4.0
+  frame_rate: 10
