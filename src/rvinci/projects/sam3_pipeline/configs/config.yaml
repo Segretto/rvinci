@@ -1,0 +1,36 @@
+defaults:
+  - hydra: default
+  - _self_
+
+project:
+  name: sam3_pipeline
+  runs_root: runs
+  notes: "Unified pipeline for SAM3 interactions"
+
+mode: visualize
+
+visualize:
+  images_dir: ???
+  annotations: ???
+  output_dir: outputs/visualizations
+  hide_score: false
+
+tracking:
+  input_json: ???
+  images_dir: ???
+  output_json: outputs/tracking_annotations.json
+  range: null
+  manual_ids: []
+  model_id: "facebook/sam3"
+
+text_prompt:
+  images_dir: ???
+  output_json: outputs/text_prompt_annotations.json
+  prompts: []
+  model_id: "facebook/sam3"
+
+filter:
+  input_json: ???
+  output_json: outputs/filtered_annotations.json
+  threshold: 0.5
+  remove_empty_images: false

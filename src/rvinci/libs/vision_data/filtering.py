@@ -91,6 +91,55 @@ def filter_coco_annotations(
         json.dump(filtered_coco, f, ensure_ascii=False, indent=2)
 
 
+def filter_coco_by_confidence(
+    input_json_path: Path, output_json_path: Path, min_score: float, remove_empty_images: bool = False
+):
+    """
+    Reads a COCO annotations JSON, filters annotations by a minimum confidence score, 
+    and saves the filtered dataset. Optionally removes images that no longer have annotations.
+    """
+    import copy
+    
+    logger.info(f"Reading input annotations from: {input_json_path}")
+    with open(input_json_path, "r", encoding="utf-8") as f:
+        original_coco = json.load(f)
+
+    if "annotations" not in original_coco:
+        raise ValueError("Invalid COCO file: no 'annotations' field found.")
+
+    coco = copy.deepcopy(original_coco)
+    original_count = len(coco["annotations"])
+
+    filtered_annotations = [
+        ann for ann in coco["annotations"]
+        if ann.get("score", 1.0) >= min_score
+    ]
+
+    new_coco = {
+        "info": coco.get("info", {}),
+        "licenses": coco.get("licenses", []),
+        "categories": coco.get("categories", []),
+        "images": coco["images"],
+        "annotations": filtered_annotations
+    }
+
+    logger.info(f"Original annotations: {original_count}. Remaining: {len(filtered_annotations)}")
+
+    if remove_empty_images:
+        valid_image_ids = {ann["image_id"] for ann in filtered_annotations}
+        original_images = len(new_coco["images"])
+
+        new_coco["images"] = [
+            img for img in new_coco["images"]
+            if img["id"] in valid_image_ids
+        ]
+        logger.info(f"Removed {original_images - len(new_coco['images'])} empty images.")
+
+    logger.info(f"Writing confidence-filtered annotations to: {output_json_path}")
+    with open(output_json_path, "w", encoding="utf-8") as f:
+        json.dump(new_coco, f, ensure_ascii=False, indent=2)
+
+
 def hash_image(file_path):
     """Generate a hash for an image file to check for duplicates."""
     hash_md5 = hashlib.md5()
