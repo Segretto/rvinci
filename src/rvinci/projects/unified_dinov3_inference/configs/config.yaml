@@ -1,0 +1,18 @@
+input_source: "/home/orin/unified_dinov3_2/00015.jpeg"
+is_video: false
+fp16: false
+
+unified_weights: "weights/unified_model.pth"
+backbone_weights: "/home/orin/unified_dinov3_2/unified_dinov3/weights/dinov3_vits16plus.pth"
+dino_dir: "../../dinov3"
+dino_model_type: "dinov3_vits16plus"
+class_names: "/home/orin/unified_dinov3_2/unified_dinov3/classes.txt"
+
+image_size: 640
+
+dinov3_config:
+  num_classes: 7
+  n_layers: 12
+  embed_dim: 384
+  depth_out_size: [640, 640]
+  seg_target_size: [160, 160]

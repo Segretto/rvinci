@@ -27,7 +27,9 @@ dependencies = [
     "torch",
     "torchvision",
     "vggt",
-    "lark"
+    "lark",
+    "transformers>=5.2.0",
+    "torch-tensorrt>=2.9.0",
 ]
 
 [dependency-groups]
