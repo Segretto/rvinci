@@ -37,10 +37,16 @@ dependencies = [
 dev = ["pytest"]
 
 [tool.uv.sources]
-vggt = { path = "/home/segreto/Repos/VGGT", editable = true }
+vggt = { git = "https://github.com/facebookresearch/vggt.git" }
 
 [project.scripts]
 rvinci-legacy = "rvinci.projects.vision_suite_legacy.cli:main"
+
+[project.optional-dependencies]
+spot = [
+    "bosdyn-client>=5.1.1",
+    "bosdyn-core>=5.1.1",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
