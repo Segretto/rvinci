@@ -14,5 +14,5 @@ Read strict documentation to ensure compliance with rvinci standards.
 
 # Instructions
 1.  Determine which document contains the answer.
-2.  Read the file.
+2.  Use the `view_file` tool to read the file, appending the paths above to the repository root directory.
 3.  Apply the pattern to the current task.

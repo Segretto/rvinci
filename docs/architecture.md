@@ -205,6 +205,8 @@ Never assume current working directory is repo root.
 6. How to Add a New Skill
 ----------------------------------------------------------------------
 
+*(Note for AI Agents: Execute the `/scaffold_skill` workflow to instantly generate this!)*
+
 1. Create folder under:
 
     src/rvinci/skills/<domain>/<skill_name>/
@@ -226,6 +228,8 @@ Never assume current working directory is repo root.
 ----------------------------------------------------------------------
 7. How to Add a New Project
 ----------------------------------------------------------------------
+
+*(Note for AI Agents: Execute the `/scaffold_projects` workflow to instantly generate this!)*
 
 1. Create folder under:
 

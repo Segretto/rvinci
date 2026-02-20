@@ -16,15 +16,15 @@ description: Scaffold a new rvinci skill with the canonical structure (no Hydra 
 2. **Read canonical structure**
    - Read `docs/architecture.md` and follow the "How to Add a New Skill" structure exactly.
 
-3. **Create directories**
-   - Create:
-     - `src/rvinci/skills/{{domain}}/{{skill_name}}/`
-     - `src/rvinci/skills/{{domain}}/{{skill_name}}/schemas/`
+3. **Create skill skeleton**
+   - Run the following bash snippet to scaffold the directory structure and empty files.
 
-4. **Create required package files**
-   - Create empty:
-     - `src/rvinci/skills/{{domain}}/{{skill_name}}/__init__.py`
-     - `src/rvinci/skills/{{domain}}/{{skill_name}}/schemas/__init__.py`
+   // turbo
+   ```bash
+   mkdir -p src/rvinci/skills/{{domain}}/{{skill_name}}/schemas
+   touch src/rvinci/skills/{{domain}}/{{skill_name}}/__init__.py
+   touch src/rvinci/skills/{{domain}}/{{skill_name}}/schemas/__init__.py
+   ```
 
 5. **Create `api.py` (public interface)**
    - Create:
@@ -51,9 +51,11 @@ description: Scaffold a new rvinci skill with the canonical structure (no Hydra 
      - Expected inputs/outputs (conceptual, not implementation details)
      - Note: "This skill is Hydra-agnostic; orchestration belongs in projects."
 
-8. **Do NOT add dependencies automatically**
-   - If new dependencies are required:
-     - Propose them and ask the user before editing `pyproject.toml`.
+. **Do NOT add dependencies automatically**
+   - If new dependencies are required for the scaffolded components:
+     - Propose them and explicitly ask the user for permission before modifying `pyproject.toml`.
+     - If approved, you MUST use the CLI: `uv add <package> --group <group_name>`
+     - Always follow up with: `uv sync` to ensure the lockfile remains deterministic and up-to-date.
 
 9. **Optional: basic sanity checks (safe)**
    - If available in the workspace:

@@ -21,20 +21,17 @@ Example:
    - Read `docs/architecture.md` and follow the "How to Add a New Project" and "Canonical CLI Pattern" sections.
    - Read `docs/runs_and_artifacts.md` and ensure run ownership/structure is respected.
 
-3. **Create directories**
-   - Create:
-     - `src/rvinci/projects/{{project_name}}/`
-     - `src/rvinci/projects/{{project_name}}/configs/`
-     - `src/rvinci/projects/{{project_name}}/schemas/`
-     - `src/rvinci/projects/{{project_name}}/pipeline/`
-     - `src/rvinci/projects/{{project_name}}/outputs/`
-
-4. **Create required package files**
-   - Create empty:
-     - `src/rvinci/projects/{{project_name}}/__init__.py`
-     - `src/rvinci/projects/{{project_name}}/schemas/__init__.py`
-     - `src/rvinci/projects/{{project_name}}/pipeline/__init__.py`
-     - `src/rvinci/projects/{{project_name}}/outputs/__init__.py`
+3. **Create project skeleton**
+   - Run the following bash snippet to scaffold the directory structure and empty files.
+   
+   // turbo
+   ```bash
+   mkdir -p src/rvinci/projects/{{project_name}}/{configs/hydra,schemas,pipeline,outputs}
+   touch src/rvinci/projects/{{project_name}}/__init__.py
+   touch src/rvinci/projects/{{project_name}}/schemas/__init__.py
+   touch src/rvinci/projects/{{project_name}}/pipeline/__init__.py
+   touch src/rvinci/projects/{{project_name}}/outputs/__init__.py
+   ```
 
 5. **Create `cli.py` (Hydra entrypoint + Config Gate)**
    - Create:

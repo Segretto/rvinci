@@ -9,7 +9,7 @@ Execute a pipeline or task within an `rvinci` project.
 # Instructions
 1.  Identify the project name from the user's request (e.g., "spot_pick_place", "dinov3_benchmark").
 2.  Construct the command using `uv run`.
-3.  Execute the command.
+3.  Use the `run_command` tool to execute the command from the repository root directory.
 
 # Examples
 User: "Run the training loop for the dinov3 benchmark."
