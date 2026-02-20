@@ -1,9 +1,10 @@
 import hydra
 from omegaconf import DictConfig
+
 from rvinci.core.config import validate_config
 from rvinci.core.logging import get_logger
-from rvinci.projects.dinov3_segdepth_inference.schemas.config import ProjectConfig
-from rvinci.projects.dinov3_segdepth_inference.pipeline.run_inference import run_pipeline
+from rvinci.projects.spot_data_collection.schemas.config import ProjectConfig
+from rvinci.projects.spot_data_collection.pipeline.run import run_pipeline
 
 log = get_logger(__name__)
 

@@ -6,7 +6,7 @@ trigger: always_on
 
 These rules apply to all work in this workspace.
 
-1) **Namespace Is Law:** All code lives under `src/rvinci/`. Import only via `rvinci.*` (never relative). The package must work after `pip install -e .`. Never modify `sys.path`.
+1) **Namespace & Paths:** All code lives under `src/rvinci/`. Import only via `rvinci.*` (never relative). The package must work after `pip install -e .`. Never modify `sys.path`. For external open-source projects, always use `git` URLs in `pyproject.toml` (e.g. `{ git = "..." }`). Never use absolute paths (e.g. `/home/user`) for local dependencies. Use relative paths ONLY for purely local packages that aren't on git.
 2) **Dependency Gravity:** core → libs → skills → projects. Forbidden: projects→projects, skills→projects, core→libs/skills/projects.
 3) **Skills vs Projects:** 
    - **Skills:** Reusable deep-learning capabilities (no Hydra, Pydantic configs, stable API at `rvinci.skills.<domain>.<skill>.api`).

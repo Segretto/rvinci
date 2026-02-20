@@ -20,21 +20,21 @@ Run the project via the canonical `uv` command:
 
 ### 1. Image Inference
 ```bash
-uv run python -m rvinci.projects.unified_dinov3_inference.cli \
+uv run python -m rvinci.projects.dinov3_segdepth_inference.cli \
     input_source="path/to/your/image.jpg" \
     is_video=false
 ```
 
 ### 2. Video/Camera Inference
 ```bash
-uv run python -m rvinci.projects.unified_dinov3_inference.cli \
+uv run python -m rvinci.projects.dinov3_segdepth_inference.cli \
     input_source="0" \
     is_video=true
 ```
 
 ## Configuration
 
-The project uses Hydra for configuration. You can find the default values in `src/rvinci/projects/unified_dinov3_inference/configs/config.yaml`.
+The project uses Hydra for configuration. You can find the default values in `src/rvinci/projects/dinov3_segdepth_inference/configs/config.yaml`.
 
 Key parameters:
 - `unified_weights`: Path to the merged checkpoint.

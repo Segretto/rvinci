@@ -24,6 +24,7 @@ This allows:
 - Clean separation of perception, mapping, manipulation stacks
 - GPU vs CPU builds
 - Robot-specific SDK isolation
+- Never use absolute paths (e.g. `/home/user/...`) in `pyproject.toml` for local or editable dependencies. Use relative paths for purely local dependencies, and prefer direct `git` URLs (e.g. `{ git = "https://github.com/..." }`) for open source projects.
 
 
 ----------------------------------------------------------------------

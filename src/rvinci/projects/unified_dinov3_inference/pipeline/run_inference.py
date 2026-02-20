@@ -8,8 +8,8 @@ from transformers.utils import ModelOutput
 import torch_tensorrt
 
 from rvinci.core.logging import get_logger
-from rvinci.projects.unified_dinov3_inference.schemas.config import ProjectConfig
-from rvinci.projects.unified_dinov3_inference.pipeline.utils import (
+from rvinci.projects.dinov3_segdepth_inference.schemas.config import ProjectConfig
+from rvinci.projects.dinov3_segdepth_inference.pipeline.utils import (
     image_to_tensor, depth_to_colormap, generate_instance_overlay
 )
 from rvinci.skills.perception.unified_dinov3.api import build_unified_dinov3
