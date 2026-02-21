@@ -14,16 +14,16 @@ spot:
   hostname: "192.168.80.3"
   username: "admin"
   password: "pass"
-  frequency_hz: 20.0
+  frequency_hz: 1.0
   output_dir: "positions"
 
 trajectory:
   num_positions: 200
-  x_distance_range: 0.55
-  y_range: 0.5
-  z_range: 0.4
-  y_range_plane: 0.3
-  z_range_plane: 0.3
-  roll_range_deg: 95.0
+  x_distance_range: 0.3
+  y_range: 0.02
+  z_range: 0.02
+  y_range_plane: 0.15
+  z_range_plane: 0.15
+  roll_range_deg: 135.0 # Grip is right at -90 degrees
   move_duration: 4.0
-  frame_rate: 10
+  frame_rate: 1
