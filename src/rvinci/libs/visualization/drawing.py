@@ -1,6 +1,7 @@
 import cv2
 import os
 import numpy as np
+import torch
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -9,14 +10,20 @@ def get_font(size=32, bold=False):
     Robust font loader. Prefers CMU Sans Serif as requested by user.
     """
     # Potential names/paths for CMU Sans (cmunss.ttf is the standard filename)
-    font_names = ["cmunss.ttf", "cmunsx.ttf"] # ss = sans; sx = sans bold/semibold
+    font_names = ["cmunss.ttf", "cmunsx.ttf"]  # ss = sans; sx = sans bold/semibold
     if bold:
-        font_names = ["cmunssx.ttf", "cmunsx.ttf", "cmunss.ttf"] # Try bold variant first
+        font_names = [
+            "cmunssx.ttf",
+            "cmunsx.ttf",
+            "cmunss.ttf",
+        ]  # Try bold variant first
 
     # 1. Check local assets directory first
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    base_dir = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
     local_font_dir = os.path.join(base_dir, "vision_suite", "assets", "fonts")
-    
+
     # 2. Other common system font directories
     font_dirs = [
         local_font_dir,
@@ -25,7 +32,7 @@ def get_font(size=32, bold=False):
         "/usr/local/share/fonts/truetype/cmu/",
         os.path.expanduser("~/.local/share/fonts/cmu/"),
     ]
-    
+
     # Check each directory for one of the target fonts
     for d in font_dirs:
         if not os.path.exists(d):
@@ -41,8 +48,10 @@ def get_font(size=32, bold=False):
     # 3. Fallbacks if CMU is not found anywhere
     fallbacks = [
         "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "DroidSerif-Bold.ttf" if bold else "DroidSerif-Regular.ttf"
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        if bold
+        else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "DroidSerif-Bold.ttf" if bold else "DroidSerif-Regular.ttf",
     ]
 
     for f in fallbacks:
@@ -59,7 +68,9 @@ def draw_bounding_boxes(img, boxes_to_render, class_map, font_size=40):
     Draw bounding boxes on a PIL Image.
     """
     header_h = 0
-    if class_map and img.size[1] < 150: # Simple heuristic: if height < 150 (like our 100x100 tests), add header
+    if (
+        class_map and img.size[1] < 150
+    ):  # Simple heuristic: if height < 150 (like our 100x100 tests), add header
         header_h = 60
         w, h = img.size
         header = Image.new("RGB", (w, header_h), (255, 255, 255))
@@ -84,7 +95,7 @@ def draw_bounding_boxes(img, boxes_to_render, class_map, font_size=40):
         coords = box_info["box"]
         if header_h > 0:
             coords = (coords[0], coords[1] + header_h, coords[2], coords[3] + header_h)
-        
+
         color = box_info["color"]
         text = box_info.get("text")
 
@@ -107,23 +118,23 @@ def draw_bounding_boxes(img, boxes_to_render, class_map, font_size=40):
             text_width = abs(x_right - x_left)
             text_height = abs(y_bottom - y_top)
             bbox_xmid = (x_max - x_min) / 2
-            
+
             # Position text on top of the box
             text_position = (
                 x_min + bbox_xmid - text_width // 2,
-                y_min - text_height - 5, # Slight padding
+                y_min - text_height - 5,  # Slight padding
             )
             # If off screen, put below
             if text_position[1] < 0:
                 text_position = (x_min + bbox_xmid - text_width // 2, y_max + 5)
-            
+
             shadow_position = (text_position[0] + 1, text_position[1] + 1)
             texts.append(
                 {
                     "text": text,
                     "position": text_position,
                     "shadow_position": shadow_position,
-                    "color": color # Pass class color for text
+                    "color": color,  # Pass class color for text
                 }
             )
 
@@ -163,8 +174,13 @@ def draw_bounding_boxes(img, boxes_to_render, class_map, font_size=40):
             text_info["text"],
             font=font,
             fill=text_color,
-            stroke_width=1, 
-            stroke_fill=(0,0,0,255) # Add stroke for "Bold" look and contrast if using class color
+            stroke_width=1,
+            stroke_fill=(
+                0,
+                0,
+                0,
+                255,
+            ),  # Add stroke for "Bold" look and contrast if using class color
         )
 
     # Composite overlay onto the image
@@ -192,12 +208,12 @@ def draw_segmentation_masks(img, masks_to_render, class_map, alpha=0.4, font_siz
         img = canvas.convert("RGBA")
     else:
         img = img.convert("RGBA")
-    
+
     # Anti-aliasing via oversampling
-    scale = 2 
+    scale = 2
     original_size = img.size
     upscaled_size = (original_size[0] * scale, original_size[1] * scale)
-    
+
     # Create high-res overlay
     overlay_hi = Image.new("RGBA", upscaled_size, (255, 255, 255, 0))
     draw_hi = ImageDraw.Draw(overlay_hi)
@@ -205,7 +221,7 @@ def draw_segmentation_masks(img, masks_to_render, class_map, alpha=0.4, font_siz
     img_width, img_height = upscaled_size
 
     for mask_info in masks_to_render:
-        polygon = mask_info["polygon"] 
+        polygon = mask_info["polygon"]
         # Shift polygon if header added
         if header_h > 0:
             # Polygon is normalized [0, 1]. We need to adjust it for the new height.
@@ -215,18 +231,20 @@ def draw_segmentation_masks(img, masks_to_render, class_map, alpha=0.4, font_siz
             pass
 
         color = mask_info["color"]
-        
+
         mask_alpha = int(255 * alpha)
         fill_color = color + (mask_alpha,)
         outline_color = color + (255,)
 
         abs_polygon = []
         if isinstance(polygon[0], (list, tuple)):
-             for pt in polygon:
-                 abs_polygon.append((int(pt[0] * img_width), int(pt[1] * img_height)))
+            for pt in polygon:
+                abs_polygon.append((int(pt[0] * img_width), int(pt[1] * img_height)))
         else:
-             for i in range(0, len(polygon), 2):
-                 abs_polygon.append((int(polygon[i] * img_width), int(polygon[i+1] * img_height)))
+            for i in range(0, len(polygon), 2):
+                abs_polygon.append(
+                    (int(polygon[i] * img_width), int(polygon[i + 1] * img_height))
+                )
 
         if len(abs_polygon) < 2:
             continue
@@ -258,14 +276,21 @@ def draw_segmentation_masks(img, masks_to_render, class_map, alpha=0.4, font_siz
             text_pos = (int(p0[0] * img_w), int(p0[1] * img_h))
             if header_h > 0:
                 text_pos = (text_pos[0], text_pos[1] + header_h)
-            draw.text(text_pos, text, font=font, fill=color+(255,), stroke_width=1, stroke_fill=(0,0,0,255))
+            draw.text(
+                text_pos,
+                text,
+                font=font,
+                fill=color + (255,),
+                stroke_width=1,
+                stroke_fill=(0, 0, 0, 255),
+            )
 
     # Composite overlay onto the image
     if header_h > 0:
         draw_horizontal_legend(draw, class_map, font, *img.size, y=10)
     else:
         draw_legend(draw, class_map, font, *img.size)
-    
+
     img = Image.alpha_composite(img, overlay)
     return img
 
@@ -277,7 +302,7 @@ def draw_rounded_rectangle(draw, xy, radius=5, fill=None, outline=None, width=1)
 def draw_legend(draw, class_map, font, img_width, img_height, radius=10, x=10, y=10):
     legend_x = x
     legend_y = y
-    y_text_offset = 6 # Increased padding (was 5)
+    y_text_offset = 6  # Increased padding (was 5)
     x_text_offset = 6
 
     max_text_width = 0
@@ -294,7 +319,7 @@ def draw_legend(draw, class_map, font, img_width, img_height, radius=10, x=10, y
         text_height = abs(y_bottom - y_top)
 
         max_text_width = max(max_text_width, text_width)
-        total_text_height += text_height + 10 # Increased spacing (was 5)
+        total_text_height += text_height + 10  # Increased spacing (was 5)
 
         entries.append(
             {
@@ -310,30 +335,30 @@ def draw_legend(draw, class_map, font, img_width, img_height, radius=10, x=10, y
 
     # Calculate max height for uniform square size
     max_h = max(entry["text_height"] for entry in entries)
-    square_size = int(0.7 * max_h) 
-    
+    square_size = int(0.7 * max_h)
+
     legend_width = square_size + max_text_width + 5 * x_text_offset
     # Increase legend width padding?
     legend_width = int(legend_width * 1.15)
-    
+
     legend_height = total_text_height + 3 * y_text_offset
-    legend_height = int(legend_height * 1.15) # Force bigger box
-    
+    legend_height = int(legend_height * 1.15)  # Force bigger box
+
     # Recalculate background (maybe just padding)
     # Actually if I scale width/height blindly, content might not fill it properly or be centered.
     # Better to increase internal paddings.
     # Let's revert explicit width/height mult and just use generous padding.
-    
-    padding_scale = 1.3 # Increase padding
+
+    padding_scale = 1.3  # Increase padding
     x_text_offset = int(x_text_offset * padding_scale)
     y_text_offset = int(y_text_offset * padding_scale)
-    
+
     # Re-calc based on new offsets
     total_text_height = 0
     for entry in entries:
-        total_text_height += entry["text_height"] + y_text_offset # spacing
+        total_text_height += entry["text_height"] + y_text_offset  # spacing
 
-    legend_width = square_size + max_text_width + 4 * x_text_offset 
+    legend_width = square_size + max_text_width + 4 * x_text_offset
     legend_height = total_text_height + 2 * y_text_offset
 
     legend_background = [
@@ -352,12 +377,12 @@ def draw_legend(draw, class_map, font, img_width, img_height, radius=10, x=10, y
         # We want the square to be vertically centered relative to the text line.
         # Row height roughly text_height (plus spacing).
         # Center line of this row is at current_y + text_height/2.
-        
+
         row_center_y = current_y + text_height / 2
-        
+
         # Square top should be center - size/2
         square_y = row_center_y - square_size / 2
-        
+
         square_coords = [
             legend_x + x_text_offset,
             square_y,
@@ -368,10 +393,16 @@ def draw_legend(draw, class_map, font, img_width, img_height, radius=10, x=10, y
             square_coords, radius=radius * 0.1, fill=color + (255,), outline=None
         )
 
-        # Text position: 
+        # Text position:
         # Using anchor="lm" (left middle) to ensure consistent vertical alignment
         text_x = legend_x + x_text_offset * 2 + square_size
-        draw.text((text_x, row_center_y), text, fill=(255, 255, 255, 255), font=font, anchor="lm")
+        draw.text(
+            (text_x, row_center_y),
+            text,
+            fill=(255, 255, 255, 255),
+            font=font,
+            anchor="lm",
+        )
 
         current_y += max_h + y_text_offset
 
@@ -399,7 +430,10 @@ def draw_confidence_values(
                 text_position, f"{confidence:.2f}", font=font, fill=(255, 255, 255)
             )
 
-def draw_horizontal_legend(draw, class_map, font, img_width, img_height, x=10, y=10, radius=5):
+
+def draw_horizontal_legend(
+    draw, class_map, font, img_width, img_height, x=10, y=10, radius=5
+):
     """
     Draw a horizontal legend without background, centered at (img_width // 2, y).
     """
@@ -423,13 +457,15 @@ def draw_horizontal_legend(draw, class_map, font, img_width, img_height, x=10, y
         bbox = font.getbbox(class_name)
         tw = abs(bbox[2] - bbox[0])
         th = abs(bbox[3] - bbox[1])
-        
-        entries.append({
-            "name": class_name,
-            "color": color,
-            "tw": tw,
-            "th": th,
-        })
+
+        entries.append(
+            {
+                "name": class_name,
+                "color": color,
+                "tw": tw,
+                "th": th,
+            }
+        )
         max_h = max(max_h, th)
 
     if not entries:
@@ -444,7 +480,7 @@ def draw_horizontal_legend(draw, class_map, font, img_width, img_height, x=10, y
         total_width += entry["w"]
 
     total_width += entry_gap * (len(entries) - 1)
-    
+
     # Calculate starting X to center
     start_x = (img_width - total_width) // 2
     current_x = start_x
@@ -453,20 +489,123 @@ def draw_horizontal_legend(draw, class_map, font, img_width, img_height, x=10, y
         # Vertical centering within max_h
         row_center_y = y + max_h / 2
         sq_y = row_center_y - entry["sq_size"] / 2
-        
+
         # Color square
         sq_rect = [
             current_x,
             sq_y,
             current_x + entry["sq_size"],
-            sq_y + entry["sq_size"]
+            sq_y + entry["sq_size"],
         ]
-        draw.rounded_rectangle(sq_rect, radius=int(entry["sq_size"] * 0.2), fill=entry["color"] + (255,))
-        
+        draw.rounded_rectangle(
+            sq_rect, radius=int(entry["sq_size"] * 0.2), fill=entry["color"] + (255,)
+        )
+
         # Text
         text_x = current_x + entry["sq_size"] + square_gap
-        draw.text((text_x, row_center_y), entry["name"], font=font, fill=(0, 0, 0, 255), anchor="lm")
-        
+        draw.text(
+            (text_x, row_center_y),
+            entry["name"],
+            font=font,
+            fill=(0, 0, 0, 255),
+            anchor="lm",
+        )
+
         current_x += entry["w"] + entry_gap
 
     return max_h + y_text_offset * 2
+
+
+def depth_to_colormap(
+    depth_m: np.ndarray,
+    dmin: float | None = None,
+    dmax: float | None = None,
+    colormap: int = cv2.COLORMAP_INFERNO,
+    invert: bool = True,
+    bgr: bool = True,
+) -> np.ndarray:
+    """
+    Convert an HxW depth map in meters to a color (BGR) visualization.
+    """
+    depth = np.asarray(depth_m, dtype=np.float32)
+    assert depth.ndim == 2, "depth_m must be HxW"
+
+    valid = np.isfinite(depth) & (depth > 0)
+
+    if dmin is None or dmax is None:
+        if np.any(valid):
+            vals = depth[valid]
+            if dmin is None:
+                dmin = float(np.percentile(vals, 5))
+            if dmax is None:
+                dmax = float(np.percentile(vals, 95))
+        else:
+            dmin, dmax = 0.1, 1.0
+    if dmax <= dmin:
+        dmax = dmin + 1e-6
+
+    norm = (depth - dmin) / (dmax - dmin)
+    norm = np.clip(norm, 0.0, 1.0)
+    if invert:
+        norm = 1.0 - norm
+    gray8 = (norm * 255.0).astype(np.uint8)
+
+    color_bgr = cv2.applyColorMap(gray8, colormap)
+
+    if not np.all(valid):
+        color_bgr[~valid] = (0, 0, 0)
+
+    if bgr:
+        return color_bgr
+    else:
+        return color_bgr[:, :, ::-1].copy()
+
+
+def generate_instance_overlay(
+    image,
+    segmentation,
+    segments_info,
+    class_names=None,
+    alpha=0.6,
+    seed=42,
+    target_size=(640, 640),
+):
+    """
+    Overlays instance segmentation masks onto an image.
+    """
+    img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, target_size, interpolation=cv2.INTER_LINEAR)
+
+    rng = np.random.RandomState(seed)
+    palette = rng.randint(0, 256, size=(len(segments_info) + 1, 3), dtype=np.uint8)
+
+    def overlay(base, mask, color):
+        if torch.is_tensor(mask):
+            mask = mask.cpu().numpy()
+        out = base.astype(np.float32)
+        m3 = mask[..., None].astype(np.float32)
+        color = np.array(color, dtype=np.float32).reshape(1, 1, 3)
+        out = out * (1 - alpha * m3) + color * (alpha * m3)
+        return out.clip(0, 255).astype(np.uint8)
+
+    for i, seg in enumerate(segments_info):
+        inst_id = seg["id"]
+        cls_id = seg["label_id"]
+        score = seg.get("score", None)
+
+        mask = segmentation == inst_id
+        color = palette[i + 1]
+        img = overlay(img, mask, color)
+
+        mask_np = mask.cpu().numpy() if torch.is_tensor(mask) else mask
+        ys, xs = np.nonzero(mask_np)
+        if ys.size > 0:
+            y0, x0 = int(ys.mean()), int(xs.mean())
+            label = class_names[cls_id] if class_names else str(cls_id)
+            if score is not None:
+                label += f" {score:.2f}"
+            cv2.putText(
+                img, label, (x0, y0), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2
+            )
+
+    return img

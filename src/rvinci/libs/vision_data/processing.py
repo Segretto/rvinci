@@ -1,5 +1,7 @@
 import json
 import logging
+import numpy as np
+import torch
 from pathlib import Path
 from PIL import Image
 
@@ -67,3 +69,12 @@ def update_annotations(annotation_path, target_size, original_size):
 
     except IOError as e:
         logger.error(f"Error processing annotation file {annotation_path}: {e}")
+
+
+def image_to_tensor(img, mean, std):
+    """
+    Converts a numpy image array to a tensor ready to be used in NN.
+    """
+    img = img.astype(np.float32) / 255.0
+    img = (img.transpose(2, 0, 1) - mean) / std
+    return torch.from_numpy(img)
