@@ -39,15 +39,14 @@ class UnifiedDINOv3(nn.Module):
         # but for now we follow the script's loading patterns.
 
     def forward(self, x):
-        s1 = torch.cuda.Stream()
-        s2 = torch.cuda.Stream()
 
         feat = self.backbone(x)
 
-        # In inference, stream logic works best when synchronous operations don't block.
-        # However, for pure nn.Module simplicity we can conditionally enable streams if available,
-        # but pure sequential works perfectly well on small sizes.
-        # Leaving the stream logic since original authors used it for performance gains.
+        # Stream logic for inference in big GPUs
+
+        s1 = torch.cuda.Stream()
+        s2 = torch.cuda.Stream()
+
         if x.is_cuda:
             with torch.cuda.stream(s1):
                 depth_out = self.depth_head(feat[-1])

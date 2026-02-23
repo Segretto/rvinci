@@ -13,12 +13,12 @@ from rvinci.libs.visualization.drawing import (
     depth_to_colormap,
     generate_instance_overlay,
 )
+from rvinci.libs.vision_data.constants import IMG_MEAN, IMG_STD
+from rvinci.libs.inference.optimization import optimize_and_warmup
+from rvinci.libs.utils.video import get_media_stream
 from rvinci.skills.perception.dinov3.api import build_dinov3
 
 log = get_logger(__name__)
-
-IMG_MEAN = [0.485, 0.456, 0.406]
-IMG_STD = [0.229, 0.224, 0.225]
 
 
 def run_pipeline(config: ProjectConfig) -> None:
@@ -57,14 +57,7 @@ def run_pipeline(config: ProjectConfig) -> None:
 
     # Load Custom Weights
     log.info("Loading custom weights from ...")
-    # checkpoint = torch.load(config.unified_weights, map_location=device)
-    # if 'depth_head' in checkpoint and 'seg_head' in checkpoint:
-    #     model.depth_head.load_state_dict(checkpoint['depth_head'])
-    #     model.seg_head.load_state_dict(checkpoint['seg_head'])
-    # else:
-    #     log.warning("Unified weights didn't contain 'depth_head' and 'seg_head' keys directly. Trying to load individual files if present in the same directory.")
-    #     try:
-    #         base_dir = os.path.dirname(config.unified_weights)
+
     try:
         base_dir = os.path.dirname(config.unified_weights)
         model.depth_head.load_state_dict(
@@ -87,121 +80,46 @@ def run_pipeline(config: ProjectConfig) -> None:
         "facebook/mask2former-swin-small-coco-instance"
     )
 
-    opts = {
-        "torch_executed_ops": {"aten.native_group_norm.default"},
-        "min_block_size": 10,
-        "debug": False,
-    }
-    if config.fp16:
-        opts["enabled_precisions"] = {torch.float16}
-
-    ### DEBUG ###
-    # trt_model = torch.compile(model, backend="tensorrt", options=opts)
-    trt_model = model
-    # Warmup
-    log.info("Warming up model...")
-    dtype = torch.float16 if config.fp16 else torch.float32
-    example_input = torch.randn(
-        1, 3, config.image_size, config.image_size, dtype=dtype, device=device
-    )
-    with torch.no_grad(), torch.inference_mode():
-        trt_model(example_input)
+    # Optimize model (TensorRT + Warmup) if on Aarch64
+    trt_model = optimize_and_warmup(model, config, device)
 
     # Prepare Normalization Parameters
     mean_np = np.array(IMG_MEAN, dtype=np.float32).reshape(3, 1, 1)
     std_np = np.array(IMG_STD, dtype=np.float32).reshape(3, 1, 1)
+    dtype = torch.float16 if config.fp16 else torch.float32
 
-    if config.is_video:
-        source = (
-            int(config.input_source)
-            if config.input_source.isdigit()
-            else config.input_source
+    # Get unified media stream
+    stream = get_media_stream(config.input_source, is_video=config.is_video)
+
+    for frame_idx, original_bgr_frame, original_rgb_frame in stream:
+        log.info(f"Processing frame {frame_idx}...")
+
+        # Resize to network resolution
+        input_rgb = cv2.resize(
+            original_rgb_frame,
+            (config.image_size, config.image_size),
+            interpolation=cv2.INTER_LINEAR,
         )
-        cap = cv2.VideoCapture(source)
-        if not cap.isOpened():
-            raise RuntimeError(f"Could not open video source: {source}")
-
-        log.info("Starting stream. Press 'q' to exit.")
-        try:
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                input_frame = cv2.resize(
-                    frame,
-                    (config.image_size, config.image_size),
-                    interpolation=cv2.INTER_LINEAR,
-                )
-                img_rgb = cv2.cvtColor(input_frame, cv2.COLOR_BGR2RGB)
-
-                img_tensor = image_to_tensor(img_rgb, mean_np, std_np)
-                img_tensor = img_tensor.unsqueeze(0).to(device=device, dtype=dtype)
-
-                with torch.inference_mode():
-                    t0 = time.time()
-                    depth_pred, seg_logits = trt_model(img_tensor)
-                    t1 = time.time()
-
-                    depth_map = depth_pred.squeeze().float().cpu().numpy()
-                    results = processor.post_process_instance_segmentation(
-                        ModelOutput(seg_logits),
-                        target_sizes=[(config.image_size, config.image_size)],
-                    )
-
-                depth_vis = depth_to_colormap(depth_map, bgr=True)
-                seg_vis = generate_instance_overlay(
-                    input_frame,
-                    results[0]["segmentation"],
-                    results[0]["segments_info"],
-                    class_names,
-                    target_size=(config.image_size, config.image_size),
-                )
-                seg_vis = cv2.cvtColor(seg_vis, cv2.COLOR_RGB2BGR)
-
-                combined = np.hstack((seg_vis, depth_vis))
-                cv2.putText(
-                    combined,
-                    f"FPS: {1.0 / (t1 - t0):.1f}",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 0),
-                    2,
-                )
-                cv2.imshow("Unified DINOv3 (Left: Seg, Right: Depth)", combined)
-
-                window_name = "Unified DINOv3 (Left: Seg, Right: Depth)"
-                if (
-                    cv2.waitKey(1) & 0xFF == ord("q")
-                    or cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1
-                ):
-                    break
-        finally:
-            cap.release()
-            cv2.destroyAllWindows()
-    else:
-        log.info(f"Processing image {config.input_source}...")
-        image = cv2.imread(config.input_source)
-        if image is None:
-            raise FileNotFoundError(f"Could not read image: {config.input_source}")
-
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_resized = cv2.resize(
-            image_rgb,
+        # Some draw logic expects original BGR (or resized BGR)
+        input_bgr = cv2.resize(
+            original_bgr_frame,
             (config.image_size, config.image_size),
             interpolation=cv2.INTER_LINEAR,
         )
 
-        img_tensor = image_to_tensor(image_resized, mean_np, std_np)
+        img_tensor = image_to_tensor(input_rgb, mean_np, std_np)
         img_tensor = img_tensor.unsqueeze(0).to(device=device, dtype=dtype)
 
         with torch.inference_mode():
             t0 = time.time()
             depth_pred, seg_logits = trt_model(img_tensor)
-            torch.cuda.synchronize()
+            if device == "cuda":
+                torch.cuda.synchronize()
             t1 = time.time()
-            log.info(f"Inference time: {(t1 - t0) * 1000:.2f} ms")
+            inf_time = (t1 - t0) * 1000
+            fps = 1.0 / (t1 - t0 + 1e-9)
+            if not config.is_video:
+                log.info(f"Inference time: {inf_time:.2f} ms")
 
             depth_map = depth_pred.squeeze().float().cpu().numpy()
             results = processor.post_process_instance_segmentation(
@@ -211,7 +129,7 @@ def run_pipeline(config: ProjectConfig) -> None:
 
         depth_vis = depth_to_colormap(depth_map, bgr=True)
         seg_vis = generate_instance_overlay(
-            image,
+            input_bgr if config.is_video else original_bgr_frame,
             results[0]["segmentation"],
             results[0]["segments_info"],
             class_names,
@@ -220,24 +138,47 @@ def run_pipeline(config: ProjectConfig) -> None:
         seg_vis = cv2.cvtColor(seg_vis, cv2.COLOR_RGB2BGR)
 
         combined = np.hstack((seg_vis, depth_vis))
-        output_path = "outputs/inference_result.png"
-        os.makedirs("outputs", exist_ok=True)
-        cv2.imwrite(output_path, combined)
-        log.info(f"Saved visualization to {output_path}")
 
-        # Try to show it if display is available
+        # Add FPS overlay if video
+        if config.is_video:
+            cv2.putText(
+                combined,
+                f"FPS: {fps:.1f}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
+
+        if not config.is_video:
+            output_path = "outputs/inference_result.png"
+            os.makedirs("outputs", exist_ok=True)
+            cv2.imwrite(output_path, combined)
+            log.info(f"Saved visualization to {output_path}")
+
         window_name = "Unified DINOv3 (Left: Seg, Right: Depth)"
         try:
             cv2.imshow(window_name, combined)
-            log.info("Visualization open. Press any key or close the window to exit.")
-            while True:
-                # Check if the window was closed by the user
-                if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
-                    break
-                # Wait for a key press (short timeout to keep the loop alive and responsive to Ctrl+C)
-                if cv2.waitKey(50) != -1:
+            if not config.is_video:
+                log.info(
+                    "Visualization open. Press any key or close the window to exit."
+                )
+
+            wait_time = 1 if config.is_video else 50
+            if not config.is_video:
+                while True:
+                    if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+                        break
+                    if cv2.waitKey(wait_time) != -1:
+                        break
+            else:
+                if (
+                    cv2.waitKey(wait_time) & 0xFF == ord("q")
+                    or cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1
+                ):
                     break
         except cv2.error:
             log.warning("Display visualization failed (likely no DISPLAY available).")
-        finally:
-            cv2.destroyAllWindows()
+
+    cv2.destroyAllWindows()
