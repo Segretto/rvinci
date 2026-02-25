@@ -31,23 +31,23 @@ def parse_pose_dict(pose_dict: Dict[str, Any]) -> torch.Tensor:
 
 class ImitationDataset(torch.utils.data.Dataset):
     """
-    A Dataset parser for the Spot bottleneck imitation logging format.
+    A Dataset parser for the unified data.json imitation logging format.
     """
 
     def __init__(self, data_dir: str | Path):
         self.data_dir = Path(data_dir)
-        self.samples = []
+        self.json_path = self.data_dir / "data.json"
 
-        # Discover all .json files iteratively
-        if not self.data_dir.exists():
-            raise FileNotFoundError(f"Data directory {data_dir} does not exist.")
+        if not self.json_path.exists():
+            raise FileNotFoundError(f"Dataset block {self.json_path} does not exist.")
 
-        # Glob for all JSON files inside the folder or subfolders
-        self.json_paths = sorted(list(self.data_dir.rglob("*.json")))
-        log.info(f"Discovered {len(self.json_paths)} JSON samples in {data_dir}")
+        with open(self.json_path, "r") as f:
+            self.samples = json.load(f)
+
+        log.info(f"Loaded {len(self.samples)} samples from {self.json_path}")
 
     def __len__(self) -> int:
-        return len(self.json_paths)
+        return len(self.samples)
 
     def __getitem__(self, idx: int) -> Tuple[str, torch.Tensor, torch.Tensor]:
         """
@@ -56,14 +56,15 @@ class ImitationDataset(torch.utils.data.Dataset):
             wrist_pose (torch.Tensor): 7D proprioceptive input pose (XYZ + WXYZ)
             target_pose (torch.Tensor): 7D target bottleneck relative pose (XYZ + WXYZ)
         """
-        json_path = self.json_paths[idx]
-        with open(json_path, "r") as f:
-            data = json.load(f)
+        data = self.samples[idx]
 
-        img_path = str(json_path.parent / Path(data["image_filename"]).name)
+        # Load the annotations specifically since the root structure is slightly nested
+        ann = data["annotations"]
 
-        wrist_pose = parse_pose_dict(data["wrist_frame"])
-        target_pose = parse_pose_dict(data["hand_tform_bottleneck"])
+        img_path = str(self.data_dir / data["file_name"])
+
+        wrist_pose = parse_pose_dict(ann["wrist_frame"])
+        target_pose = parse_pose_dict(ann["hand_tform_bottleneck"])
 
         return img_path, wrist_pose, target_pose
 
