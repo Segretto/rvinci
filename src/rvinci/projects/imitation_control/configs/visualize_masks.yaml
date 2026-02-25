@@ -1,0 +1,12 @@
+project:
+  name: imitation_segmentation_visualization
+  runs_root: runs
+  notes: Visually validates the dataset extraction masks.
+
+visualize:
+  data_path: ???
+  sleep_freq: 0.1
+
+defaults:
+  - _self_
+  - hydra: default
