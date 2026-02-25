@@ -3,12 +3,13 @@ from torch import nn
 from typing import List
 from transformers import AutoModelForUniversalSegmentation, AutoConfig
 
+
 class Adapter(nn.Module):
     def __init__(self, in_channels: int, out_channels: List[int]):
         super().__init__()
-        self.projections = nn.ModuleList([
-            nn.Conv2d(in_channels, out_ch, kernel_size=1) for out_ch in out_channels
-        ])
+        self.projections = nn.ModuleList(
+            [nn.Conv2d(in_channels, out_ch, kernel_size=1) for out_ch in out_channels]
+        )
 
         self.up_x4 = nn.Upsample(scale_factor=4, mode="bilinear", align_corners=False)
         self.up_x2 = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
@@ -22,19 +23,22 @@ class Adapter(nn.Module):
         out3 = self.down_x2(projected[3])
         return [out0, out1, out2, out3]
 
+
 class InstanceSegmentationHead(nn.Module):
     def __init__(self):
         super().__init__()
         # Load mask2former with 1 class for initialization
-        config = AutoConfig.from_pretrained("facebook/mask2former-swin-small-coco-instance")
+        config = AutoConfig.from_pretrained(
+            "facebook/mask2former-swin-small-coco-instance"
+        )
         config.num_labels = 1
         mask2former_model = AutoModelForUniversalSegmentation.from_config(config)
 
         self.adapter = Adapter(in_channels=384, out_channels=[96, 192, 384, 768])
         self.mask2former = mask2former_model
-    
+
     def forward(self, features: List[torch.Tensor]) -> dict:
-        layers_to_extract = [2, 5, 8, 11]   
+        layers_to_extract = [2, 5, 8, 11]
         selected_features = [features[i] for i in layers_to_extract]
 
         adapted = self.adapter(selected_features)
@@ -45,11 +49,14 @@ class InstanceSegmentationHead(nn.Module):
             mask_features=decoder_output.mask_features,
         )
 
-        class_queries_logits = self.mask2former.class_predictor(output.last_hidden_state)
+        class_queries_logits = self.mask2former.class_predictor(
+            output.last_hidden_state
+        )
         masks_queries_logits = output.masks_queries_logits[-1]
-        
+
         seg_out = {
             "class_queries_logits": class_queries_logits,
-            "masks_queries_logits": masks_queries_logits
+            "masks_queries_logits": masks_queries_logits,
+            "transformer_decoder_last_hidden_state": output.last_hidden_state,
         }
         return seg_out
