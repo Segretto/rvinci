@@ -1,0 +1,20 @@
+project:
+  name: imitation_control_training
+  runs_root: runs
+  notes: Training the PoseFusionHead offset regressor.
+
+skills:
+  enabled:
+    - perception.dinov3
+    - manipulation.imitation
+
+training:
+  train_data_path: ???
+  val_data_path: ???
+  batch_size: 1
+  learning_rate: 1e-4
+  num_epochs: 100
+
+defaults:
+  - _self_
+  - hydra: default

@@ -1,0 +1,19 @@
+project:
+  name: imitation_control_dataset_gen
+  runs_root: runs
+  notes: Offline feature generation for imitation learning.
+
+skills:
+  enabled:
+    - perception.dinov3
+    - manipulation.imitation
+
+dataset:
+  input_dir: ???
+  output_file: ???
+  feature_mode: "query" # Can be "query" or "mask"
+
+# We can reuse the default dinov3 configuration
+defaults:
+  - _self_
+  - hydra: default
