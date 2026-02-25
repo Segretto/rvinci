@@ -31,7 +31,7 @@ def parse_pose_dict(pose_dict: Dict[str, Any]) -> torch.Tensor:
 
 class ImitationDataset(torch.utils.data.Dataset):
     """
-    A Dataset parser for the unified data.json imitation logging format.
+    A Dataset parser for the Spot bottleneck imitation logging format.
     """
 
     def __init__(self, data_dir: str | Path):
@@ -100,12 +100,15 @@ class OfflineFeatureDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return self.length
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(
+        self, idx: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, str]:
         """
         Returns:
             visual_feature (torch.Tensor): The pre-extracted visual latent (e.g., query vector)
             wrist_pose (torch.Tensor): 7D proprioceptive input pose
             target_pose (torch.Tensor): 7D target pose (relative offset)
+            img_path (str): The source image path for visualizations
         """
         sample = self.data[idx]
 
@@ -130,4 +133,7 @@ class OfflineFeatureDataset(torch.utils.data.Dataset):
             else tp
         )
 
-        return visual_feature, wrist_pose, target_pose
+        # We need the source image path for visualizations
+        img_path = sample.get("image_path", "")
+
+        return visual_feature, wrist_pose, target_pose, img_path

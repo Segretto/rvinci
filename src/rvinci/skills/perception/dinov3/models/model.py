@@ -44,17 +44,17 @@ class UnifiedDINOv3(nn.Module):
 
         # Stream logic for inference in big GPUs
 
-        s1 = torch.cuda.Stream()
-        s2 = torch.cuda.Stream()
+        # s1 = torch.cuda.Stream()
+        # s2 = torch.cuda.Stream()
 
-        if x.is_cuda:
-            with torch.cuda.stream(s1):
-                depth_out = self.depth_head(feat[-1])
-            with torch.cuda.stream(s2):
-                seg_out = self.seg_head(feat)
-            torch.cuda.synchronize()
-        else:
-            depth_out = self.depth_head(feat[-1])
-            seg_out = self.seg_head(feat)
+        # if x.is_cuda:
+        #     with torch.cuda.stream(s1):
+        #         depth_out = self.depth_head(feat[-1])
+        #     with torch.cuda.stream(s2):
+        #         seg_out = self.seg_head(feat)
+        #     torch.cuda.synchronize()
+        # else:
+        depth_out = self.depth_head(feat[-1])
+        seg_out = self.seg_head(feat)
 
         return depth_out, seg_out

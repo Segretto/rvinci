@@ -28,7 +28,24 @@ uv run python -m rvinci.projects.imitation_control.generate_dataset \
 
 ---
 
-## 2. Imitation Training
+## 2. Dataset Visualization
+
+After generating a dataset with `feature_mode="mask"`, you can visually verify the extracted masks using the `visualize_masks.py` utility. This script renders the segmentation masks atop the original frames.
+
+**Configuration file:** `configs/visualize_masks.yaml`
+
+```bash
+uv run python -m rvinci.projects.imitation_control.visualize_masks \
+    visualize.data_path="runs/mask/dataset.pkl"
+```
+
+### Controls
+- **Any Key**: Proceed to the next frame.
+- **ESC / Q**: Exit the visualization window.
+
+---
+
+## 3. Imitation Training
 
 The `train_imitation.py` pipeline loads your structured feature datasets into an `OfflineFeatureDataset` memory object and trains the `PoseFusionHead` from the imitation skill. 
 
@@ -49,7 +66,7 @@ uv run python -m rvinci.projects.imitation_control.train_imitation \
 
 ---
 
-## 3. Robot Control Deployment
+## 4. Robot Control Deployment
 
 After a model completes training, it can be tested live inside the `run.py` inference loop. The project script retrieves RGB images arriving directly from the robot, repeats the vision query extraction strategy dynamically, computes the relative target transformation offsets, and issues execution commands via the Spot SDK.
 

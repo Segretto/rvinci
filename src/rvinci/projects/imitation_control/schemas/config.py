@@ -23,6 +23,9 @@ class ProjectConfig(BaseModel):
 
     # Spot / Imitation Specific Parameters
     hostname: str = Field(..., description="Hostname or IP of the Spot Robot")
+    head_weights_dir: str = Field(
+        "models", description="Directory where custom DINOv3 head weights are stored"
+    )
     model_path: str = Field(
         ..., description="Path to the trained PyTorch Imitation network weights"
     )

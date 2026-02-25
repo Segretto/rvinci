@@ -29,6 +29,9 @@ from rvinci.projects.imitation_control.schemas.config import ProjectConfig
 
 from rvinci.skills.perception.dinov3.api import build_dinov3
 from rvinci.skills.manipulation.imitation.api import PoseFusionHead, parse_pose_dict
+from rvinci.libs.vision_data.processing import image_to_tensor
+from rvinci.libs.vision_data.constants import IMG_MEAN, IMG_STD
+import os
 
 log = get_logger(__name__)
 
@@ -136,15 +139,41 @@ def run_pipeline(config: ProjectConfig) -> None:
 
     # 1. Setup Models
     log.info("Loading DINOv3 Backbone...")
-    # NOTE: Hardcoding repo for simplicity in this porting step
+    dino_dir = os.path.join(os.getcwd(), "modules/dinov3")
+    weights_path = getattr(
+        config.skills.dinov3, "weights_path", "models/dinov3_vits16plus.pth"
+    )
+    weights_full_path = os.path.join(os.getcwd(), weights_path)
+
     dino_model = torch.hub.load(
-        repo_or_dir="facebookresearch/dinov2",
-        model="dinov2_vits14",
+        repo_or_dir=dino_dir,
+        model="dinov3_vits16plus",
+        source="local",
+        weights=weights_full_path,
     )
 
     log.info("Building Unified DINOv3 Feature Extractor...")
     dinov3_model = build_dinov3(dino_model, config.skills.dinov3)
     dinov3_model.to(device)
+
+    # Load custom DINOv3 Head Weights
+    head_weights_dir = config.head_weights_dir
+    log.info(f"Loading custom DINOv3 head weights from {head_weights_dir}")
+    try:
+        dinov3_model.depth_head.load_state_dict(
+            torch.load(
+                os.path.join(head_weights_dir, "depth_head.pth"), map_location=device
+            )
+        )
+        dinov3_model.seg_head.load_state_dict(
+            torch.load(
+                os.path.join(head_weights_dir, "instance_seg_head.pt"),
+                map_location=device,
+            )
+        )
+    except Exception as e:
+        log.warning(f"Failed to load custom head weights from {head_weights_dir}: {e}")
+
     dinov3_model.eval()
 
     processor = AutoImageProcessor.from_pretrained(
@@ -208,27 +237,26 @@ def run_pipeline(config: ProjectConfig) -> None:
                 # Process Vision
                 rgb_frame = cv2.cvtColor(original_bgr_frame, cv2.COLOR_BGR2RGB)
 
-                # Ensure image logic matches the DINOv3 pipeline which uses 518x518 standard
-                # Force don't resize in processor so DINOv2 patch embedding (14x14) works
+                # Ensure image logic matches the DINOv3 training pipeline preprocessing
                 image_size = config.skills.dinov3.image_size
                 rgb_frame = cv2.resize(rgb_frame, (image_size, image_size))
-                inputs = processor(
-                    images=rgb_frame,
-                    return_tensors="pt",
-                    do_resize=False,
-                ).to(device)
+
+                mean_np = np.array(IMG_MEAN, dtype=np.float32).reshape(3, 1, 1)
+                std_np = np.array(IMG_STD, dtype=np.float32).reshape(3, 1, 1)
+                img_tensor = image_to_tensor(rgb_frame, mean_np, std_np)
+                img_tensor = img_tensor.unsqueeze(0).to(device=device)
 
                 with torch.inference_mode():
                     # 1. Get raw model outputs (depth and the full seg_out dict)
-                    _, seg_out = dinov3_model(inputs.pixel_values)
+                    _, seg_out = dinov3_model(img_tensor)
 
                     # 2. Extract the latent queries from the decoder
                     all_queries = seg_out["transformer_decoder_last_hidden_state"]
 
-                    # 3. Find the 'winning' query for target_class_id = 1
+                    # 3. Find the 'winning' query for Target object
                     class_logits = seg_out["class_queries_logits"]
                     probs = torch.softmax(class_logits, dim=-1)
-                    target_class_id = 1
+                    target_class_id = 0
                     query_indices = probs[..., target_class_id].argmax(dim=-1)
 
                     # 4. Extract only that specific query vector

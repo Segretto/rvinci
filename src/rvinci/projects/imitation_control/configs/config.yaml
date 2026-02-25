@@ -12,7 +12,7 @@ skills:
     - perception.dinov3
     - manipulation.imitation
   dinov3:
-    image_size: 518
+    image_size: 640
     fp16: true
     weights_path: "models/dinov3_vits16plus.pth"
   imitation:

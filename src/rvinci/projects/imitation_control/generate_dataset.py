@@ -20,6 +20,9 @@ class DatasetGenConfig(BaseModel):
     feature_mode: str = Field(
         "query", description="Which DINOv3 features to extract: 'query' or 'mask'"
     )
+    head_weights_dir: str = Field(
+        "models", description="Directory where instance_seg_head.pt is stored."
+    )
 
 
 class GenProjectConfig(BaseModel):

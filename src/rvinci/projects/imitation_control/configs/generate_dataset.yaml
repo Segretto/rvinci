@@ -12,6 +12,7 @@ dataset:
   input_dir: ???
   output_file: ???
   feature_mode: "query" # Can be "query" or "mask"
+  head_weights_dir: "models"
 
 # We can reuse the default dinov3 configuration
 defaults:
